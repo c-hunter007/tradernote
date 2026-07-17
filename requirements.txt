@@ -1,0 +1,8 @@
+streamlit==1.59.2
+sqlalchemy==2.0.35
+akshare>=1.16.72
+bcrypt==4.2.0
+pillow==10.4.0
+python-dotenv==1.0.1
+streamlit-cookies-manager==0.2.0
+requests>=2.31.0

@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.opencode/
+
+# 环境变量
+.env
+
+# 数据
+data/
+
+# 上传图片
+uploads/
+
+# IDE
+.vscode/
+.idea/
+
+# Streamlit
+.streamlit/secrets.toml
