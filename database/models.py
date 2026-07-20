@@ -12,7 +12,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.orm import DeclarativeBase, relationship
+from sqlalchemy.orm import backref, DeclarativeBase, relationship
 
 
 class Base(DeclarativeBase):
@@ -173,7 +173,7 @@ class Activity(Base):
     created_at = Column(DateTime, nullable=False, server_default=text("(datetime('now','localtime'))"))
 
     user = relationship("User", backref="activities")
-    pool = relationship("StockPool", backref="activities")
+    pool = relationship("StockPool", backref=backref("activities", passive_deletes=True))
 
 
 class NoteComment(Base):

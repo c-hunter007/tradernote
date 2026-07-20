@@ -20,7 +20,7 @@ from services.pool_service import can_access_pool, get_pool_dto
 from services.stock_service import get_pool_stock_dto
 from utils.date_util import format_date, format_datetime
 from utils.page import render_back_to_pools_button, render_page_header, render_sidebar_user
-from utils.ui import render_empty_state, render_note_card
+from utils.ui import render_empty_state
 
 user = render_page_header("股票分析", "📝", "添加分析结论、上传配图")
 render_sidebar_user()
@@ -120,25 +120,20 @@ else:
                     st.session_state[f"delete_{n.id}"] = True
                     st.rerun()
 
-        # 卡片本体（与股票卡片风格对齐）
-        render_note_card(
-            username=n.username,
-            created_at=format_datetime(n.created_at),
-            content=n.content,
-            image_count=len(n.image_paths),
-        )
+        # 卡片本体（含文字与配图）
+        with st.container(border=True):
+            meta_parts = [f"**{n.username}** · {format_datetime(n.created_at)}"]
+            if n.image_paths:
+                meta_parts.append(f"🖼 {len(n.image_paths)} 张配图")
+            st.markdown(" · ".join(meta_parts))
+            st.markdown(n.content)
 
-        # 显示图片
-        if n.image_paths:
-            st.caption("配图")
-            img_cols = st.columns(min(len(n.image_paths), 4))
-            for idx, rel_path in enumerate(n.image_paths):
-                col_idx = idx % 4
-                with img_cols[col_idx]:
+            if n.image_paths:
+                for rel_path in n.image_paths:
                     abs_path = str(UPLOAD_DIR / rel_path)
                     if os.path.exists(abs_path):
                         try:
-                            st.image(abs_path, width=200)
+                            st.image(abs_path, use_container_width=True)
                         except Exception:
                             st.warning(f"图片加载失败：{rel_path}")
                     else:
@@ -198,7 +193,7 @@ else:
                         with img_col:
                             if os.path.exists(abs_path):
                                 try:
-                                    st.image(abs_path, width=120)
+                                    st.image(abs_path, width=200)
                                 except Exception:
                                     st.caption("图片加载失败")
                             else:
@@ -209,25 +204,31 @@ else:
                 # 新增图片
                 st.markdown("**新增配图**")
                 new_files = st.file_uploader(
-                    "选择新图片",
+                    "选择新图片（最多 5 张）",
                     type=["png", "jpg", "jpeg", "gif", "webp"],
                     accept_multiple_files=True,
                     key=f"new_files_{n.id}",
                 )
                 if new_files:
-                    for f in new_files:
-                        ok, msg = validate_image_file(f)
-                        if ok:
-                            st.caption(f"✅ {f.name} ({f.size / 1024 / 1024:.2f}MB)")
-                        else:
-                            st.error(f"{f.name}：{msg}")
+                    if len(new_files) > 5:
+                        st.error(f"单次最多上传 5 张图片，已选择 {len(new_files)} 张")
+                    else:
+                        for f in new_files:
+                            ok, msg = validate_image_file(f)
+                            if ok:
+                                st.caption(f"✅ {f.name} ({f.size / 1024 / 1024:.2f}MB)")
+                            else:
+                                st.error(f"{f.name}：{msg}")
 
                 # 保存/取消按钮
                 save_cols = st.columns([1, 1, 3])
                 if save_cols[0].button("保存", key=f"save_{n.id}", type="primary"):
                     new_content = (st.session_state.get(f"edit_content_{n.id}") or "").strip()
+                    new_files = st.session_state.get(f"new_files_{n.id}") or []
                     if not new_content:
                         st.error("分析结论内容不能为空")
+                    elif len(new_files) > 5:
+                        st.error(f"单次最多上传 5 张图片，已选择 {len(new_files)} 张")
                     else:
                         try:
                             with get_session() as session3:
@@ -236,9 +237,7 @@ else:
                                     note_id=n.id,
                                     user_id=user["id"],
                                     new_content=new_content,
-                                    new_added_files=st.session_state.get(
-                                        f"new_files_{n.id}"
-                                    ) or [],
+                                    new_added_files=new_files,
                                     removed_image_ids=removed_ids,
                                 )
                             st.toast("已更新分析结论", icon="✅")
@@ -291,18 +290,24 @@ else:
             height=120,
         )
         uploaded_files = st.file_uploader(
-            "配图（可选，单张 ≤ 3MB）",
+            "配图（可选，最多 5 张，单张 ≤ 3MB）",
             type=["png", "jpg", "jpeg", "gif", "webp"],
             accept_multiple_files=True,
             key="new_note_files",
         )
+        files_valid = True
         if uploaded_files:
-            for f in uploaded_files:
-                ok, msg = validate_image_file(f)
-                if ok:
-                    st.caption(f"✅ {f.name} ({f.size / 1024 / 1024:.2f}MB)")
-                else:
-                    st.error(f"{f.name}：{msg}")
+            if len(uploaded_files) > 5:
+                st.error(f"单次最多上传 5 张图片，已选择 {len(uploaded_files)} 张")
+                files_valid = False
+            else:
+                for f in uploaded_files:
+                    ok, msg = validate_image_file(f)
+                    if ok:
+                        st.caption(f"✅ {f.name} ({f.size / 1024 / 1024:.2f}MB)")
+                    else:
+                        st.error(f"{f.name}：{msg}")
+                        files_valid = False
         submitted = st.form_submit_button("提交分析结论", type="primary")
 
         if submitted:
@@ -310,6 +315,8 @@ else:
             files = st.session_state.get("new_note_files") or []
             if not content:
                 st.error("分析结论内容不能为空")
+            elif not files_valid:
+                st.error("请修正图片上传后重新提交")
             else:
                 try:
                     with get_session() as session5:
