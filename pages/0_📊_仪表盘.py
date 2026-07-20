@@ -56,6 +56,14 @@ def render_login_page() -> None:
             st.toast(f"欢迎回来，{user.username}！", icon="✅")
             st.rerun()
 
+    with get_session() as session:
+        has_admin = session.query(User).filter_by(role="admin").first() is not None
+    if not has_admin:
+        st.markdown("---")
+        st.warning("⚠️ 系统尚未初始化，请先创建管理员账号。")
+        if st.button("🔧 初始化系统", type="primary", use_container_width=True):
+            st.switch_page(st.session_state["_page_init"])
+
 
 def _render_stat_card(icon: str, label: str, value: int) -> None:
     st.markdown(

@@ -32,18 +32,22 @@ tradernote/
 │   └── password.py             # bcrypt 工具
 ├── services/
 │   ├── user_service.py
-│   ├── pool_service.py         # M2
-│   ├── stock_service.py        # M3/M4
-│   ├── analysis_service.py     # M3
-│   └── akshare_service.py      # M3
-├── pages/                      # Streamlit 多页应用
+│   ├── pool_service.py          # 股票池 CRUD + 成员管理
+│   ├── stock_service.py         # 股票增删 + 关键关注
+│   ├── analysis_service.py      # 分析笔记 + 图片管理 + 评论
+│   ├── activity_service.py      # 活动日志
+│   ├── akshare_service.py       # A 股代码查询
+│   └── feishu_service.py        # 飞书机器人通知
+├── pages/                       # Streamlit 多页应用
+│   ├── 0_📊_仪表盘.py           # 登录页 + 仪表盘
 │   ├── 0_🛡️_管理后台.py
+│   ├── 0_🔧_系统初始化.py       # 首次部署初始化（隐藏页）
 │   ├── 1_📈_我的股票池.py
 │   ├── 2_👥_共享池成员.py
 │   ├── 3_🔍_股票池详情.py
 │   ├── 4_📝_股票分析.py
 │   ├── 5_♻️_复盘归档.py
-│   └── 9_🚧_交易记录.py        # 占位（后期开发）
+│   └── 9_🚧_交易记录.py         # 占位（后期开发）
 ├── utils/
 │   ├── ui.py                   # 卡片样式、空状态、消息提示
 │   ├── page.py                 # 页面通用辅助
@@ -75,21 +79,27 @@ cp .env.example .env
 #   python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-### 4. 初始化首个管理员账号
-
-```bash
-python -m scripts.init_admin
-```
-
-按提示输入用户名和密码即可创建首个管理员账号。后续可通过管理后台创建更多用户。
-
-### 5. 启动应用
+### 4. 启动应用
 
 ```bash
 streamlit run app.py --server.port=8501 --server.address=127.0.0.1
 ```
 
 浏览器访问 `http://127.0.0.1:8501`。
+
+### 5. 初始化系统
+
+首次访问时，登录页会自动检测系统状态，显示「🔧 初始化系统」入口。点击进入后：
+
+1. 自动创建数据库表
+2. 填写管理员用户名和密码
+3. 提交后自动登录并跳转仪表盘
+
+也可通过命令行初始化：
+
+```bash
+python -m scripts.init_admin
+```
 
 ### 6. 重置管理员密码（如需）
 
@@ -101,12 +111,17 @@ python -m scripts.init_admin --reset-password <用户名>
 
 | 模块 | 说明 |
 |---|---|
-| 用户体系 | 仅管理员预创建账号；无自助注册 |
+| 系统初始化 | 首次部署时通过 Web 页面创建数据库表和管理员账号，仅可执行一次 |
+| 用户体系 | 仅管理员预创建账号；无自助注册；支持启用/禁用、角色升降 |
 | 股票池 | 自定义名称；私有 / 共享两种；共享池支持成员协作 |
 | 股票纳入 | 输入 6 位代码，akshare 自动补全名称（仅新增时调用一次） |
-| 持续跟踪 | 添加分析结论 + 多张配图（单张 ≤ 3MB） |
-| 重点关注 | 自动顶置 + 醒目颜色/字体 |
-| 移出 | 填写移出结论后从池中移出，可在「复盘归档」页查看 |
+| 持续跟踪 | 添加分析结论 + 多张配图（单次最多 5 张，单张 ≤ 3MB） |
+| 重点关注 | 自动顶置 + 金色背景醒目样式 |
+| 移出复盘 | 填写移出原因后从池中移除，可在「复盘归档」页查看历史 |
+| 图片预览 | 卡片内全宽展示，支持 Streamlit 内置 Fullscreen 查看原图 |
+| 评论系统 | 池成员可对分析笔记进行点评 |
+| 飞书通知 | 配置 Webhook 后，池内操作自动推送飞书消息卡片 |
+| 活动日志 | 记录所有用户操作，仪表盘展示近期活动 |
 | 交易记录 | 后期开发，目前仅占位页 |
 
 ## 部署说明（Nginx HTTPS 反向代理）
@@ -250,7 +265,7 @@ sudo systemctl status tradernote
 
 - [ ] 创建虚拟环境并安装依赖
 - [ ] 复制 `.env.example` 为 `.env` 并修改 `SECRET_KEY`
-- [ ] 运行 `python -m scripts.init_admin` 创建首个管理员
+- [ ] 启动应用，访问后通过 Web 页面初始化系统（或命令行 `python -m scripts.init_admin`）
 - [ ] 配置 Nginx HTTPS 反向代理
 - [ ] 配置 systemd 服务（可选）
 - [ ] 配置防火墙：仅允许 80/443 端口，禁止 8501 直接访问外网
