@@ -70,8 +70,11 @@ def main() -> None:
             )
             session.add(user)
             session.flush()
+            user_id = user.id
+            user_username = user.username
+            user_role = user.role
 
-        login_user(user.id, user.username, user.role)
+        login_user(user_id, user_username, user_role)
         st.toast(f"🎉 系统初始化完成！管理员账号：{username}", icon="✅")
         st.switch_page("pages/0_📊_仪表盘.py")
 
