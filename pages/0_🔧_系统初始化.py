@@ -56,6 +56,7 @@ def main() -> None:
             return
 
         username = username.strip()
+
         with get_session() as session:
             if session.query(User).filter_by(username=username).first():
                 st.error(f"用户名 {username} 已存在")

@@ -22,9 +22,6 @@ def _get_env_int(name: str, default: int) -> int:
         return default
 
 
-# 应用秘钥（用于 cookie 签名）
-SECRET_KEY = _get_env("SECRET_KEY", "")
-
 # 数据库路径（绝对路径）
 DB_PATH = Path(_get_env("DB_PATH", "data/tradernote.db"))
 if not DB_PATH.is_absolute():

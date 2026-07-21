@@ -75,8 +75,6 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# 编辑 .env，至少修改 SECRET_KEY：
-#   python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
 ### 4. 启动应用
@@ -264,7 +262,7 @@ sudo systemctl status tradernote
 ### 7. 部署清单
 
 - [ ] 创建虚拟环境并安装依赖
-- [ ] 复制 `.env.example` 为 `.env` 并修改 `SECRET_KEY`
+- [ ] 复制 `.env.example` 为 `.env`
 - [ ] 启动应用，访问后通过 Web 页面初始化系统（或命令行 `python -m scripts.init_admin`）
 - [ ] 配置 Nginx HTTPS 反向代理
 - [ ] 配置 systemd 服务（可选）
