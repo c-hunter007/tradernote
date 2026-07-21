@@ -1,6 +1,7 @@
 """管理后台：账号管理（仅管理员可访问）。"""
 import streamlit as st
 
+from config import DB_PATH
 from database.db import get_session
 from services.user_service import (
     count_admins,
@@ -175,3 +176,79 @@ with st.form("create_user_form", clear_on_submit=True):
                 st.error(str(e))
             except Exception:
                 st.error("操作失败，请稍后重试")
+
+st.divider()
+st.subheader("📦 数据库管理")
+
+# ── 备份 ──
+with st.container(border=True):
+    st.markdown("**📥 备份数据库**")
+    st.caption("下载当前数据库文件，包含所有用户、股票池、分析记录等数据。")
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        if st.button("🔄 生成备份"):
+            from sqlalchemy import text
+            from database.db import engine
+            with engine.connect() as conn:
+                conn.execute(text("PRAGMA wal_checkpoint(TRUNCATE)"))
+            st.session_state["backup_ready"] = True
+            st.rerun()
+    with col2:
+        if st.session_state.get("backup_ready"):
+            from datetime import datetime
+            db_bytes = DB_PATH.read_bytes()
+            st.download_button(
+                "📥 下载备份文件",
+                data=db_bytes,
+                file_name=f"tradernote_{datetime.now():%Y%m%d_%H%M%S}.db",
+                mime="application/octet-stream",
+                on_click=lambda: st.session_state.pop("backup_ready", None),
+            )
+
+# ── 导入 ──
+with st.container(border=True):
+    st.markdown("**📤 导入数据库**")
+    st.caption("上传 .db 备份文件覆盖当前数据库。所有现有数据将被替换。")
+
+    uploaded = st.file_uploader("选择备份文件", type=["db"], key="db_import")
+    if uploaded is not None:
+        uploaded_bytes = uploaded.getvalue()
+
+        import sqlite3, tempfile, os
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+            tmp.write(uploaded_bytes)
+            tmp_path = tmp.name
+        try:
+            conn = sqlite3.connect(tmp_path)
+            cursor = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+            )
+            if cursor.fetchone() is None:
+                st.error("无效的数据库文件：缺少 users 表")
+                st.stop()
+            conn.close()
+        except Exception:
+            st.error("无效的数据库文件，无法打开")
+            st.stop()
+        finally:
+            os.unlink(tmp_path)
+
+        st.warning("⚠️ 导入将覆盖所有现有数据，此操作不可恢复。导入后你将需要重新登录。")
+        if st.button("确认导入", type="primary"):
+            try:
+                from database.db import engine
+                engine.dispose()
+                DB_PATH.write_bytes(uploaded_bytes)
+                for suffix in ("-wal", "-shm"):
+                    extra = DB_PATH.with_name(DB_PATH.name + suffix)
+                    if extra.exists():
+                        extra.unlink()
+                from database.init_db import init_db
+                init_db()
+                from auth.session import logout_user
+                logout_user()
+                st.toast("数据库已导入，请重新登录", icon="✅")
+                st.rerun()
+            except Exception as e:
+                st.error(f"导入失败：{e}")
