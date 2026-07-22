@@ -4,7 +4,9 @@ from datetime import datetime
 from sqlalchemy import (
     Boolean,
     Column,
+    Date,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -189,3 +191,78 @@ class NoteComment(Base):
 
     note = relationship("AnalysisNote", back_populates="comments")
     user = relationship("User", backref="note_comments")
+
+
+class TradingAccount(Base):
+    """用户交易账户（每个用户一条）。"""
+
+    __tablename__ = "trading_accounts"
+
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    available_funds = Column(Float, nullable=False, default=0.0)
+    commission_rate = Column(Float, nullable=False, default=0.0003)
+    created_at = Column(DateTime, nullable=False, server_default=text("(datetime('now','localtime'))"))
+    updated_at = Column(DateTime, nullable=False, server_default=text("(datetime('now','localtime'))"))
+
+    user = relationship("User", backref="trading_account")
+
+
+class Position(Base):
+    """当前持仓（同一用户+同一股票合并为一条记录）。"""
+
+    __tablename__ = "positions"
+    __table_args__ = (UniqueConstraint("user_id", "stock_code", name="uq_user_stock"),)
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    stock_code = Column(String(6), nullable=False)
+    stock_name = Column(String(64), nullable=False)
+    avg_price = Column(Float, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    buy_date = Column(Date, nullable=False)
+    total_buy_cost = Column(Float, nullable=False, default=0.0)
+    total_sell_revenue = Column(Float, nullable=False, default=0.0)
+    created_at = Column(DateTime, nullable=False, server_default=text("(datetime('now','localtime'))"))
+    updated_at = Column(DateTime, nullable=False, server_default=text("(datetime('now','localtime'))"))
+
+    user = relationship("User", backref="positions")
+
+
+class TradeRecord(Base):
+    """每笔买入/卖出记录。"""
+
+    __tablename__ = "trade_records"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    stock_code = Column(String(6), nullable=False)
+    stock_name = Column(String(64), nullable=False)
+    trade_type = Column(String(4), nullable=False)
+    price = Column(Float, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    trade_date = Column(Date, nullable=False)
+    commission = Column(Float, nullable=False, default=0.0)
+    pnl = Column(Float, nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=text("(datetime('now','localtime'))"))
+
+    user = relationship("User", backref="trade_records")
+
+
+class CompletedTrade(Base):
+    """已完成交易（仓位清零时记录一次）。"""
+
+    __tablename__ = "completed_trades"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    stock_code = Column(String(6), nullable=False)
+    stock_name = Column(String(64), nullable=False)
+    total_buy_cost = Column(Float, nullable=False)
+    total_sell_revenue = Column(Float, nullable=False)
+    pnl = Column(Float, nullable=False)
+    return_rate = Column(Float, nullable=False)
+    buy_start_date = Column(Date, nullable=False)
+    sell_end_date = Column(Date, nullable=False)
+    created_at = Column(DateTime, nullable=False, server_default=text("(datetime('now','localtime'))"))
+
+    user = relationship("User", backref="completed_trades")

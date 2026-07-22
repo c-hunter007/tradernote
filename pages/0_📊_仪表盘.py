@@ -28,7 +28,7 @@ from utils.ui import render_empty_state
 
 
 def render_login_page() -> None:
-    st.title("📊 TradeNote")
+    st.title("📊 TraderNote")
     st.caption("股票跟踪记录 · 个人与小型团队工具")
 
     with st.form("login_form", clear_on_submit=False):

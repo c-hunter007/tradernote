@@ -183,7 +183,7 @@ st.subheader("📦 数据库管理")
 # ── 备份 ──
 with st.container(border=True):
     st.markdown("**📥 备份数据库**")
-    st.caption("下载当前数据库文件，包含所有用户、股票池、分析记录等数据。")
+    st.caption("下载当前数据库文件，包含所有用户、股票池、分析记录、交易记录等数据。")
 
     col1, col2 = st.columns([1, 3])
     with col1:

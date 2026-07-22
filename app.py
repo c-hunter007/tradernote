@@ -43,12 +43,15 @@ if is_admin():
 
 # ── 侧边栏 ──
 with st.sidebar:
-    st.markdown("### 📊 TradeNote")
+    st.markdown("### 📊 TraderNote")
     st.caption("股票跟踪记录 · 个人与小型团队工具")
     st.divider()
     for p in visible_pages:
         st.page_link(p)
     st.divider()
+    from config import VERSION
+    st.caption(f"v{VERSION}")
+    st.caption("Powered by Streamlit")
 
 # ── 导航 ──
 pg = st.navigation(all_pages, position="hidden")

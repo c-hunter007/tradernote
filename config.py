@@ -46,3 +46,7 @@ def ensure_dirs() -> None:
     """确保运行时所需目录存在。"""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# 应用版本号
+VERSION = "0.9.1"
