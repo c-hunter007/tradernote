@@ -284,7 +284,7 @@ def _render_holdings_area() -> None:
     else:
         for pos in positions:
             with st.container(border=True):
-                cols = st.columns([3, 1, 1, 1, 1, 1])
+                cols = st.columns([2, 1, 1, 1, 1, 1])
                 cols[0].markdown(f"**{pos['stock_code']}** {pos['stock_name']}")
                 cols[1].markdown(f"买入均价：¥{pos['avg_price']:.2f}")
                 cols[2].markdown(f"买入日期：{format_date(pos['buy_date'])}")

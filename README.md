@@ -34,6 +34,7 @@ tradernote/
 │   ├── user_service.py
 │   ├── pool_service.py          # 股票池 CRUD + 成员管理
 │   ├── stock_service.py         # 股票增删 + 关键关注
+│   ├── trading_service.py       # 交易记录 + 统计分析
 │   ├── analysis_service.py      # 分析笔记 + 图片管理 + 评论
 │   ├── activity_service.py      # 活动日志
 │   ├── akshare_service.py       # A 股代码查询
@@ -47,37 +48,57 @@ tradernote/
 │   ├── 3_🔍_股票池详情.py
 │   ├── 4_📝_股票分析.py
 │   ├── 5_♻️_复盘归档.py
-│   └── 9_🚧_交易记录.py         # 占位（后期开发）
+│   └── 9_🚧_交易记录.py         # 交易记录 + 统计分析
 ├── utils/
 │   ├── ui.py                   # 卡片样式、空状态、消息提示
 │   ├── page.py                 # 页面通用辅助
 │   └── date_util.py
+├── Dockerfile                  # Docker 镜像构建
+├── docker-compose.yml          # Docker 编排
+├── .dockerignore               # Docker 构建忽略规则
+├── scripts/
+│   └── init_admin.py           # 交互式创建首个管理员 / 重置密码
 ├── data/                       # SQLite 数据库（gitignore）
 └── uploads/                    # 图片本地存储（gitignore）
 ```
 
 ## 快速开始
 
-### 1. 创建并激活虚拟环境
+### 方式一：Docker 部署（推荐）
+
+```bash
+# 1. 准备环境配置
+cp .env.example .env
+
+# 2. 构建并启动
+docker compose up -d
+
+# 3. 访问
+open http://localhost:8501
+```
+
+### 方式二：本地部署
+
+#### 1. 创建并激活虚拟环境
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 2. 安装依赖
+#### 2. 安装依赖
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. 配置环境变量
+#### 3. 配置环境变量
 
 ```bash
 cp .env.example .env
 ```
 
-### 4. 启动应用
+#### 4. 启动应用
 
 ```bash
 streamlit run app.py --server.port=8501 --server.address=127.0.0.1
@@ -85,7 +106,7 @@ streamlit run app.py --server.port=8501 --server.address=127.0.0.1
 
 浏览器访问 `http://127.0.0.1:8501`。
 
-### 5. 初始化系统
+### 初始化系统
 
 首次访问时，登录页会自动检测系统状态，显示「🔧 初始化系统」入口。点击进入后：
 
@@ -99,7 +120,7 @@ streamlit run app.py --server.port=8501 --server.address=127.0.0.1
 python -m scripts.init_admin
 ```
 
-### 6. 重置管理员密码（如需）
+### 重置管理员密码（如需）
 
 ```bash
 python -m scripts.init_admin --reset-password <用户名>
@@ -120,7 +141,45 @@ python -m scripts.init_admin --reset-password <用户名>
 | 评论系统 | 池成员可对分析笔记进行点评 |
 | 飞书通知 | 配置 Webhook 后，池内操作自动推送飞书消息卡片 |
 | 活动日志 | 记录所有用户操作，仪表盘展示近期活动 |
-| 交易记录 | 后期开发，目前仅占位页 |
+| **交易记录** | **持仓管理、买卖操作（T+1）、交易统计分析、详细记录分页展示** |
+| **交易统计** | **盈利占比、总盈亏、收益率、单笔最大亏损/盈利、最大连续亏损次数** |
+| **数据库管理** | **管理后台支持数据库备份与导入** |
+| 暗色模式 | 全页面适配 Streamlit 暗色主题 |
+
+## 部署说明（Docker）
+
+### 1. 构建镜像
+
+```bash
+docker build -t tradernote:0.9.1 .
+```
+
+### 2. 准备配置
+
+```bash
+cp .env.example .env
+mkdir -p data uploads
+```
+
+### 3. 启动容器
+
+```bash
+docker compose up -d
+```
+
+### 4. 查看日志
+
+```bash
+docker compose logs -f
+```
+
+### 5. 停止
+
+```bash
+docker compose down
+```
+
+数据持久化在宿主机 `./data/`（数据库）和 `./uploads/`（图片）目录，升级镜像不会丢失数据。
 
 ## 部署说明（Nginx HTTPS 反向代理）
 
@@ -259,8 +318,15 @@ sudo systemctl enable --now tradernote
 sudo systemctl status tradernote
 ```
 
-### 7. 部署清单
+### 部署清单
 
+**Docker 方式**：
+- [ ] 复制 `.env.example` 为 `.env`
+- [ ] 构建镜像：`docker build -t tradernote:0.9.1 .`
+- [ ] 启动服务：`docker compose up -d`
+- [ ] 通过 Web 页面初始化系统
+
+**Nginx 方式**：
 - [ ] 创建虚拟环境并安装依赖
 - [ ] 复制 `.env.example` 为 `.env`
 - [ ] 启动应用，访问后通过 Web 页面初始化系统（或命令行 `python -m scripts.init_admin`）

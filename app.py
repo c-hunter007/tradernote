@@ -3,6 +3,7 @@ import streamlit as st
 
 from auth.session import flush_pending_cookies, init_cookies, is_admin, restore_from_cookie
 from database.init_db import init_db
+from config import VERSION
 
 init_db()
 init_cookies()
@@ -44,14 +45,11 @@ if is_admin():
 # ── 侧边栏 ──
 with st.sidebar:
     st.markdown("### 📊 TraderNote")
-    st.caption("股票跟踪记录 · 个人与小型团队工具")
+    st.caption(f"多人股票跟踪记录工具 · v{VERSION}")
     st.divider()
     for p in visible_pages:
         st.page_link(p)
     st.divider()
-    from config import VERSION
-    st.caption(f"v{VERSION}")
-    st.caption("Powered by Streamlit")
 
 # ── 导航 ──
 pg = st.navigation(all_pages, position="hidden")

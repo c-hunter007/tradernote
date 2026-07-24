@@ -31,12 +31,7 @@ def render_admin_page_header(title: str, icon: str) -> dict:
 
 
 def render_sidebar_user() -> None:
-    """在侧边栏展示当前用户与退出按钮（每个页面统一调用）。
-
-    退出登录逻辑与 app.py 中的侧边栏保持一致：
-    - 按钮 key 使用 "sidebar_logout"
-    - 登出后 switch_page 到 app.py（显示登录页）
-    """
+    """在侧边栏展示当前用户与退出按钮（每个页面统一调用）。"""
     with st.sidebar:
         user = current_user()
         if user:
@@ -48,6 +43,9 @@ def render_sidebar_user() -> None:
                 logout_user()
                 st.toast("已退出登录", icon="👋")
                 st.rerun()
+        st.write("")
+        st.write("")
+        st.caption("Powered by Streamlit")
 
 
 def render_back_to_pools_button(label: str = "← 返回我的股票池", primary: bool = False) -> None:

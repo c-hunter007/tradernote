@@ -2,7 +2,7 @@
 import streamlit as st
 
 st.set_page_config(
-    page_title="TradeNote · 股票跟踪",
+    page_title="TraderNote · 股票跟踪",
     page_icon="📊",
     layout="wide",
 )
@@ -68,11 +68,11 @@ def render_login_page() -> None:
 def _render_stat_card(icon: str, label: str, value: int) -> None:
     st.markdown(
         f"""
-        <div style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;
+        <div style="background-color: var(--secondary-background-color); border: 1px solid var(--border-color); border-radius: 8px;
                     padding: 16px 12px; text-align: center;">
             <div style="font-size: 24px;">{icon}</div>
-            <div style="font-size: 28px; font-weight: 700; color: #111827; margin: 4px 0;">{value}</div>
-            <div style="font-size: 13px; color: #6b7280;">{label}</div>
+            <div style="font-size: 28px; font-weight: 700; color: var(--text-color); margin: 4px 0;">{value}</div>
+            <div style="font-size: 13px; color: var(--text-color); opacity: 0.6;">{label}</div>
         </div>
         """,
         unsafe_allow_html=True,

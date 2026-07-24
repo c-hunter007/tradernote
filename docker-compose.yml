@@ -1,0 +1,11 @@
+services:
+  tradernote:
+    image: tradernote:0.9.1
+    container_name: tradernote
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+      - ./.env:/app/.env
+    restart: unless-stopped

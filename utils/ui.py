@@ -7,8 +7,6 @@ import streamlit as st
 COLOR_KEY_FOCUS = "#fde68a"  # 金色背景（重点关注）
 COLOR_KEY_FOCUS_TEXT = "#b91c1c"  # 红色加粗
 COLOR_REMOVED = "#e5e7eb"  # 灰色（已移出）
-COLOR_NORMAL = "#ffffff"
-COLOR_MUTED = "#6b7280"
 
 
 def _esc(text: str | None) -> str:
@@ -18,16 +16,16 @@ def _esc(text: str | None) -> str:
     return html.escape(str(text))
 
 
-def render_card(title: str, body: str | None = None, color: str = COLOR_NORMAL) -> None:
+def render_card(title: str, body: str | None = None, color: str = "var(--secondary-background-color)") -> None:
     """渲染一个简单的卡片块（仅用于展示）。"""
     if body is None:
         body = ""
     st.markdown(
         f"""
-        <div style="background-color: {color}; border: 1px solid #e5e7eb; border-radius: 8px;
+        <div style="background-color: {color}; border: 1px solid var(--border-color); border-radius: 8px;
                     padding: 12px 16px; margin-bottom: 8px;">
-            <div style="font-weight: 600; font-size: 16px;">{_esc(title)}</div>
-            <div style="font-size: 13px; color: #4b5563;">{_esc(body)}</div>
+            <div style="font-weight: 600; font-size: 16px; color: var(--text-color);">{_esc(title)}</div>
+            <div style="font-size: 13px; color: var(--text-color); opacity: 0.7;">{_esc(body)}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -38,7 +36,7 @@ def render_empty_state(message: str, icon: str = "📭") -> None:
     """渲染空状态。"""
     st.markdown(
         f"""
-        <div style="text-align:center; padding: 40px 16px; color: #6b7280;">
+        <div style="text-align:center; padding: 40px 16px; color: var(--text-color); opacity: 0.5;">
             <div style="font-size: 36px;">{_esc(icon)}</div>
             <div style="font-size: 14px; margin-top: 8px;">{_esc(message)}</div>
         </div>
@@ -101,9 +99,9 @@ def render_stock_card(
         title_weight = 700
         star = "⭐ "
     else:
-        bg = "#ffffff"
-        border = "1px solid #e5e7eb"
-        title_color = "#111827"
+        bg = "var(--secondary-background-color)"
+        border = "1px solid var(--border-color)"
+        title_color = "var(--text-color)"
         title_weight = 600
         star = ""
 
@@ -114,7 +112,7 @@ def render_stock_card(
     ]
     body = " · ".join(body_parts)
     if initial_analysis:
-        body += f"<br/><span style='color:{COLOR_MUTED};'>初始分析：{_esc(initial_analysis)}</span>"
+        body += f"<br/><span style='color:var(--text-color);opacity:0.5;'>初始分析：{_esc(initial_analysis)}</span>"
 
     st.markdown(
         f"""
@@ -123,7 +121,7 @@ def render_stock_card(
             <div style="font-weight: {title_weight}; color: {title_color}; font-size: 16px;">
                 {star}{_esc(code)} {_esc(name)} · {_esc(market)}
             </div>
-            <div style="font-size: 13px; color: #4b5563;">{body}</div>
+            <div style="font-size: 13px; color: var(--text-color); opacity: 0.7;">{body}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -136,14 +134,7 @@ def render_note_card(
     content: str,
     image_count: int = 0,
 ) -> None:
-    """渲染分析结论卡片（与股票卡片风格对齐）。
-
-    Args:
-        username: 作者用户名
-        created_at: 已格式化的时间字符串
-        content: 结论内容
-        image_count: 配图数量
-    """
+    """渲染分析结论卡片（与股票卡片风格对齐）。"""
     meta_parts = [f"**{_esc(username)}** · {_esc(created_at)}"]
     if image_count:
         meta_parts.append(f"🖼 {image_count} 张配图")
@@ -151,10 +142,10 @@ def render_note_card(
 
     st.markdown(
         f"""
-        <div style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;
+        <div style="background-color: var(--secondary-background-color); border: 1px solid var(--border-color); border-radius: 8px;
                     padding: 12px 16px; margin-bottom: 4px;">
-            <div style="font-size: 13px; color: #4b5563; margin-bottom: 6px;">{meta}</div>
-            <div style="font-size: 14px; color: #111827; white-space: pre-wrap;">{_esc(content)}</div>
+            <div style="font-size: 13px; color: var(--text-color); opacity: 0.7; margin-bottom: 6px;">{meta}</div>
+            <div style="font-size: 14px; color: var(--text-color); white-space: pre-wrap;">{_esc(content)}</div>
         </div>
         """,
         unsafe_allow_html=True,
