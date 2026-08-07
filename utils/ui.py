@@ -4,9 +4,8 @@ import html
 import streamlit as st
 
 # 状态色板
-COLOR_KEY_FOCUS = "#fde68a"  # 金色背景（重点关注）
-COLOR_KEY_FOCUS_TEXT = "#b91c1c"  # 红色加粗
 COLOR_REMOVED = "#e5e7eb"  # 灰色（已移出）
+COLOR_MUTED = "#6b7280"  # 灰色（次要文字）
 
 
 def _esc(text: str | None) -> str:
@@ -46,15 +45,19 @@ def render_empty_state(message: str, icon: str = "📭") -> None:
 
 
 def render_key_focus_card(title: str, body: str = "") -> None:
-    """渲染重点关注的股票卡片（金色背景 + 红色加粗）。"""
+    """渲染重点关注的股票卡片（左边框琥珀色强调线 + CSS 变量，适配暗色模式）。"""
     st.markdown(
         f"""
-        <div style="background-color: {COLOR_KEY_FOCUS}; border: 2px solid #f59e0b;
+        <div style="background-color: var(--secondary-background-color);
+                    border-left: 4px solid #f59e0b;
+                    border-top: 1px solid var(--border-color);
+                    border-right: 1px solid var(--border-color);
+                    border-bottom: 1px solid var(--border-color);
                     border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;">
-            <div style="font-weight: 700; color: {COLOR_KEY_FOCUS_TEXT}; font-size: 16px;">
+            <div style="font-weight: 700; color: var(--text-color); font-size: 16px;">
                 ⭐ {_esc(title)}
             </div>
-            <div style="font-size: 13px; color: #7c2d12;">{_esc(body)}</div>
+            <div style="font-size: 13px; color: var(--text-color); opacity: 0.7;">{_esc(body)}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -93,15 +96,15 @@ def render_stock_card(
     - is_key_focus=False：普通卡片
     """
     if is_key_focus:
-        bg = COLOR_KEY_FOCUS
-        border = "2px solid #f59e0b"
-        title_color = COLOR_KEY_FOCUS_TEXT
+        bg = "var(--secondary-background-color)"
+        border_left = "4px solid #f59e0b"
+        border_others = "1px solid var(--border-color)"
         title_weight = 700
         star = "⭐ "
     else:
         bg = "var(--secondary-background-color)"
-        border = "1px solid var(--border-color)"
-        title_color = "var(--text-color)"
+        border_left = "1px solid var(--border-color)"
+        border_others = "1px solid var(--border-color)"
         title_weight = 600
         star = ""
 
@@ -116,9 +119,9 @@ def render_stock_card(
 
     st.markdown(
         f"""
-        <div style="background-color: {bg}; border: {border}; border-radius: 8px;
-                    padding: 12px 16px; margin-bottom: 4px;">
-            <div style="font-weight: {title_weight}; color: {title_color}; font-size: 16px;">
+        <div style="background-color: {bg}; border-left: {border_left}; border-top: {border_others}; border-right: {border_others}; border-bottom: {border_others};
+                    border-radius: 8px; padding: 12px 16px; margin-bottom: 4px;">
+            <div style="font-weight: {title_weight}; color: var(--text-color); font-size: 16px;">
                 {star}{_esc(code)} {_esc(name)} · {_esc(market)}
             </div>
             <div style="font-size: 13px; color: var(--text-color); opacity: 0.7;">{body}</div>

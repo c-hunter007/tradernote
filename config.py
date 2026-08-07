@@ -49,4 +49,4 @@ def ensure_dirs() -> None:
 
 
 # 应用版本号
-VERSION = "0.9.1"
+VERSION = "0.9.2"

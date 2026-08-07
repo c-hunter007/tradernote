@@ -1,6 +1,6 @@
 services:
   tradernote:
-    image: tradernote:0.9.1
+    image: tradernote:0.9.2
     container_name: tradernote
     ports:
       - "8501:8501"

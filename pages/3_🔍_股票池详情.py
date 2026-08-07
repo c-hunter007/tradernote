@@ -1,4 +1,6 @@
 """股票池详情：池内股票列表 + 加入股票弹窗 + 重点标记 + 移出。"""
+from datetime import date
+
 import streamlit as st
 
 from database.db import get_session
@@ -19,6 +21,7 @@ from services.stock_service import (
 from utils.date_util import format_date
 from utils.page import render_back_to_pools_button, render_page_header, render_sidebar_user
 from utils.ui import render_empty_state, render_stock_card
+from services.plan_service import list_plans_by_pool_and_date
 
 user = render_page_header("股票池详情", "🔍", "查看与维护池内股票")
 render_sidebar_user()
@@ -285,71 +288,125 @@ if remove_target:
     )
 
 # ============================================================
-# 池内股票列表
+# 池内股票列表 + 右侧操作计划面板
 # ============================================================
 
-with get_session() as session:
-    stocks = list_active_pool_stocks(session, pool_id)
+left_col, right_col = st.columns([2, 1])
 
-if not stocks:
-    render_empty_state("暂无股票，点击右上角「加入股票」开始跟踪", icon="📊")
-else:
-    for s in stocks:
-        render_stock_card(
-            code=s.code,
-            name=s.name,
-            market=s.market,
-            added_date=format_date(s.added_date),
-            added_by_username=s.added_by_username,
-            initial_analysis=s.initial_analysis,
-            note_count=s.note_count,
-            is_key_focus=s.is_key_focus,
+with left_col:
+    with get_session() as session:
+        stocks = list_active_pool_stocks(session, pool_id)
+
+    if not stocks:
+        render_empty_state("暂无股票，点击右上角「加入股票」开始跟踪", icon="📊")
+    else:
+        for s in stocks:
+            render_stock_card(
+                code=s.code,
+                name=s.name,
+                market=s.market,
+                added_date=format_date(s.added_date),
+                added_by_username=s.added_by_username,
+                initial_analysis=s.initial_analysis,
+                note_count=s.note_count,
+                is_key_focus=s.is_key_focus,
+            )
+            col_view, col_focus, col_remove, _ = st.columns([1, 1, 1, 2])
+            with col_view:
+                if st.button("📝 查看分析", key=f"view_{s.id}", use_container_width=True):
+                    st.session_state["pool_stock_id"] = s.id
+                    st.switch_page(st.session_state["_hidden_analysis_page"])
+            with col_focus:
+                if s.is_key_focus:
+                    if st.button("☆ 取消重点", key=f"unfocus_{s.id}", use_container_width=True):
+                        try:
+                            with get_session() as session:
+                                set_key_focus(
+                                    session,
+                                    pool_stock_id=s.id,
+                                    user_id=user["id"],
+                                    is_focus=False,
+                                )
+                            st.toast(f"已取消重点关注 {s.code}", icon="💫")
+                            st.rerun()
+                        except ValueError as e:
+                            st.error(str(e))
+                        except Exception:
+                            st.error("操作失败，请稍后重试")
+                else:
+                    if st.button("⭐ 设为重点", key=f"focus_{s.id}", use_container_width=True):
+                        try:
+                            with get_session() as session:
+                                set_key_focus(
+                                    session,
+                                    pool_stock_id=s.id,
+                                    user_id=user["id"],
+                                    is_focus=True,
+                                )
+                            st.toast(f"已设为重点关注 {s.code}", icon="⭐")
+                            st.rerun()
+                        except ValueError as e:
+                            st.error(str(e))
+                        except Exception:
+                            st.error("操作失败，请稍后重试")
+            with col_remove:
+                if st.button("📤 移出", key=f"remove_{s.id}", use_container_width=True):
+                    st.session_state["remove_target"] = {
+                        "id": s.id,
+                        "code": s.code,
+                        "name": s.name,
+                        "market": s.market,
+                    }
+                    st.rerun()
+            st.write("")
+
+with right_col:
+    # Header 卡片（flex + 色条）
+    st.markdown(
+        f"""<div style="display:flex;border:1px solid var(--border-color);
+border-radius:8px;margin-bottom:8px;overflow:hidden;">
+<div style="width:4px;background:var(--primary-color);flex-shrink:0;"></div>
+<div style="flex:1;padding:10px 14px;background-color:var(--secondary-background-color);">
+<div style="font-weight:600;font-size:15px;color:var(--text-color);">💰 今日操作计划</div>
+<div style="font-size:12px;color:var(--text-color);opacity:0.5;">{date.today().isoformat()}</div>
+</div></div>""",
+        unsafe_allow_html=True,
+    )
+
+    with get_session() as session:
+        today_plans = list_plans_by_pool_and_date(session, pool_id, date.today())
+
+    if not today_plans:
+        st.markdown(
+            f"<div style='color:var(--text-color);opacity:0.5;font-size:13px;padding:8px 0;'>"
+            f"今日暂无操作计划</div>",
+            unsafe_allow_html=True,
         )
-        col_view, col_focus, col_remove, _ = st.columns([1, 1, 1, 2])
-        with col_view:
-            if st.button("📝 查看分析", key=f"view_{s.id}", use_container_width=True):
-                st.session_state["pool_stock_id"] = s.id
-                st.switch_page(st.session_state["_hidden_analysis_page"])
-        with col_focus:
-            if s.is_key_focus:
-                if st.button("☆ 取消重点", key=f"unfocus_{s.id}", use_container_width=True):
-                    try:
-                        with get_session() as session:
-                            set_key_focus(
-                                session,
-                                pool_stock_id=s.id,
-                                user_id=user["id"],
-                                is_focus=False,
-                            )
-                        st.toast(f"已取消重点关注 {s.code}", icon="💫")
-                        st.rerun()
-                    except ValueError as e:
-                        st.error(str(e))
-                    except Exception:
-                        st.error("操作失败，请稍后重试")
-            else:
-                if st.button("⭐ 设为重点", key=f"focus_{s.id}", use_container_width=True):
-                    try:
-                        with get_session() as session:
-                            set_key_focus(
-                                session,
-                                pool_stock_id=s.id,
-                                user_id=user["id"],
-                                is_focus=True,
-                            )
-                        st.toast(f"已设为重点关注 {s.code}", icon="⭐")
-                        st.rerun()
-                    except ValueError as e:
-                        st.error(str(e))
-                    except Exception:
-                        st.error("操作失败，请稍后重试")
-        with col_remove:
-            if st.button("📤 移出", key=f"remove_{s.id}", use_container_width=True):
-                st.session_state["remove_target"] = {
-                    "id": s.id,
-                    "code": s.code,
-                    "name": s.name,
-                    "market": s.market,
-                }
-                st.rerun()
-        st.write("")
+    else:
+        from collections import defaultdict
+        grouped: dict[str, list] = defaultdict(list)
+        for p in today_plans:
+            key = f"{p.code} {p.name} · {p.market}"
+            grouped[key].append(p)
+
+        plan_items = []
+        for stock_key, stock_plans in grouped.items():
+            for i, sp in enumerate(stock_plans):
+                dot = "🟢" if sp.status == "completed" else "🟡"
+                border_bottom = "border-bottom:1px solid var(--border-color);" if not (i == len(stock_plans) - 1 and stock_key == list(grouped.keys())[-1]) else ""
+                plan_items.append(
+                    f"""<div style="display:flex;align-items:flex-start;padding:8px 0;{border_bottom}">
+<div style="margin-right:8px;font-size:14px;line-height:1.4;">{dot}</div>
+<div style="flex:1;">
+<div style="font-weight:600;font-size:13px;color:var(--text-color);">{stock_key}</div>
+<div style="font-size:12px;color:var(--text-color);opacity:0.7;margin-top:2px;">
+{sp.content[:50]}{'...' if len(sp.content) > 50 else ''}</div>
+</div></div>"""
+                )
+
+        st.markdown(
+            f"""<div style="border:1px solid var(--border-color);
+border-radius:8px;padding:4px 14px;background-color:var(--secondary-background-color);">
+{''.join(plan_items)}</div>""",
+            unsafe_allow_html=True,
+        )

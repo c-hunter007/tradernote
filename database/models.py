@@ -266,3 +266,25 @@ class CompletedTrade(Base):
     created_at = Column(DateTime, nullable=False, server_default=text("(datetime('now','localtime'))"))
 
     user = relationship("User", backref="completed_trades")
+
+
+class OperationPlan(Base):
+    """操作计划表。
+
+    status: pending / completed
+    plan_date: 操作日期
+    """
+
+    __tablename__ = "operation_plans"
+
+    id = Column(Integer, primary_key=True)
+    pool_stock_id = Column(Integer, ForeignKey("pool_stocks.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    plan_date = Column(Date, nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    status = Column(String(16), nullable=False, default="pending")  # pending / completed
+    created_at = Column(DateTime, nullable=False, server_default=text("(datetime('now','localtime'))"))
+    updated_at = Column(DateTime, nullable=False, server_default=text("(datetime('now','localtime'))"))
+
+    pool_stock = relationship("PoolStock", backref="operation_plans")
+    user = relationship("User", backref="operation_plans")

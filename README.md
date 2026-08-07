@@ -151,7 +151,7 @@ python -m scripts.init_admin --reset-password <用户名>
 ### 1. 构建镜像
 
 ```bash
-docker build -t tradernote:0.9.1 .
+docker build -t tradernote:0.9.2 .
 ```
 
 ### 2. 准备配置
@@ -322,7 +322,7 @@ sudo systemctl status tradernote
 
 **Docker 方式**：
 - [ ] 复制 `.env.example` 为 `.env`
-- [ ] 构建镜像：`docker build -t tradernote:0.9.1 .`
+- [ ] 构建镜像：`docker build -t tradernote:0.9.2 .`
 - [ ] 启动服务：`docker compose up -d`
 - [ ] 通过 Web 页面初始化系统
 

@@ -1,8 +1,10 @@
-"""akshare 封装：市场判断 + 名称查询 + 降级处理。
+"""akshare 封装：市场判断 + 名称查询 + 交易日历 + 降级处理。
 
 注意：本模块仅在新增加入股票时调用一次，名称缓存到 Stock 表后即复用。
 """
 import re
+from datetime import datetime, timedelta
+from functools import lru_cache
 from typing import Optional
 
 import akshare as ak
@@ -71,3 +73,48 @@ def fetch_stock_name_from_akshare(code: str) -> Optional[str]:
         return name if name else None
     except Exception:
         return None
+
+
+@lru_cache(maxsize=1)
+def fetch_trade_calendar() -> set[str]:
+    """获取 A 股交易日历，返回日期字符串集合 'YYYY-MM-DD'。
+
+    调用 ak.tool_trade_date_hist_sina()，结果被 lru_cache 缓存。
+    网络异常时返回空集，不阻塞用户。
+    """
+    try:
+        df = ak.tool_trade_date_hist_sina()
+        if df is None or df.empty or "trade_date" not in df.columns:
+            return set()
+        return set(df["trade_date"].astype(str).tolist())
+    except Exception:
+        return set()
+
+
+def is_trade_date(date_str: str) -> bool:
+    """检查日期是否为 A 股交易日。
+
+    日历数据不可用时降级为返回 True（全部视为交易日）。
+    """
+    calendar = fetch_trade_calendar()
+    if not calendar:
+        return True
+    return date_str in calendar
+
+
+def get_next_trade_date(after_date_str: str) -> str:
+    """获取指定日期之后的下一个交易日。
+
+    最多查找 30 天，超限返回 after_date_str 本身。
+    日历不可用时降级为返回 after_date_str + 1 天。
+    """
+    calendar = fetch_trade_calendar()
+    if not calendar:
+        dt = datetime.strptime(after_date_str, "%Y-%m-%d")
+        return (dt + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    sorted_dates = sorted(calendar)
+    for d in sorted_dates:
+        if d > after_date_str:
+            return d
+    return after_date_str

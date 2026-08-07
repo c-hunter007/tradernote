@@ -1,5 +1,6 @@
 """股票分析：单只股票分析历史 + 新增结论/配图 + 编辑/删除本人结论。"""
 import os
+from datetime import date
 
 import streamlit as st
 
@@ -18,11 +19,13 @@ from services.analysis_service import (
 )
 from services.pool_service import can_access_pool, get_pool_dto
 from services.stock_service import get_pool_stock_dto
+from services.plan_service import create_plan, complete_plan, delete_plan, get_plan, list_plans_by_pool_stock, update_plan
+from services.akshare_service import get_next_trade_date, is_trade_date
 from utils.date_util import format_date, format_datetime
 from utils.page import render_back_to_pools_button, render_page_header, render_sidebar_user
 from utils.ui import render_empty_state
 
-user = render_page_header("股票分析", "📝", "添加分析结论、上传配图")
+user = render_page_header("股票分析", "📈", "添加分析结论、上传配图")
 render_sidebar_user()
 
 # ============================================================
@@ -65,7 +68,14 @@ with get_session() as session:
 # 顶部信息
 # ============================================================
 
-st.subheader(f"{ps_dto.code} {ps_dto.name} · {ps_dto.market}")
+header_col = st.columns([4, 1])
+with header_col[0]:
+    st.subheader(f"{ps_dto.code} {ps_dto.name} · {ps_dto.market}")
+with header_col[1]:
+    if ps_dto.status == "active":
+        if st.button("📝 添加计划", type="primary", use_container_width=True):
+            st.session_state["show_add_plan"] = True
+            st.rerun()
 caption_parts = [
     f"所属池：{pool_dto.name}",
     f"加入者：{ps_dto.added_by_username}",
@@ -77,20 +87,269 @@ if ps_dto.status == "removed":
     removed_by = ps_dto.removed_by_username or "?"
     caption_parts.append(f"⚠️ 已移出于 {removed_at}（移出人：{removed_by}）")
 st.caption(" · ".join(caption_parts))
-if ps_dto.initial_analysis:
-    with st.container(border=True):
-        st.markdown("**初始分析**")
-        st.write(ps_dto.initial_analysis)
+# ============================================================
+# 初始分析（左 2/3）+ 操作计划（右 1/3）水平布局
+# ============================================================
+
+today = date.today()
+today_str = today.isoformat()
+is_trading = is_trade_date(today_str)
+
+with get_session() as session:
+    plans = list_plans_by_pool_stock(session, pool_stock_id)
+    today_plans = [p for p in plans if p.plan_date == today]
+
+left_col, right_col = st.columns([2, 1])
+
+with left_col:
+    if ps_dto.initial_analysis:
+        with st.container(border=True):
+            st.markdown("**初始分析**")
+            st.write(ps_dto.initial_analysis)
+
+with right_col:
+    if not is_trading:
+        st.markdown(
+            f"<div style='color:var(--text-color);opacity:0.5;font-size:13px;padding:8px 0;'>"
+            f"📋 今日非交易日</div>",
+            unsafe_allow_html=True,
+        )
+    elif not today_plans:
+        st.markdown(
+            f"<div style='color:var(--text-color);opacity:0.5;font-size:13px;padding:8px 0;'>"
+            f"📋 当日无操作计划</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        for plan in today_plans:
+            status_badge = (
+                f"<span style='border:1px solid #10b981;color:#10b981;"
+                f"border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600;'>✅ 已完成</span>"
+                if plan.status == "completed"
+                else f"<span style='border:1px solid var(--primary-color);color:var(--primary-color);"
+                f"border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600;'>⏳ 待完成</span>"
+            )
+            st.markdown(
+                f"""<div style="display:flex;border:1px solid var(--border-color);
+border-radius:8px;margin-bottom:8px;overflow:hidden;">
+<div style="width:6px;background:var(--primary-color);flex-shrink:0;"></div>
+<div style="flex:1;padding:14px 16px;background-color:var(--secondary-background-color);">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+<span style="font-weight:700;font-size:16px;color:var(--text-color);">💰 今日操作计划</span>
+{status_badge}</div>
+<div style="font-size:14px;color:var(--text-color);margin-bottom:8px;line-height:1.6;">
+{plan.content}</div>
+<div style="font-size:12px;color:var(--text-color);opacity:0.5;">
+📅 {plan.plan_date}</div></div></div>""",
+                unsafe_allow_html=True,
+            )
+
+            if plan.status == "pending":
+                act_cols = st.columns(3)
+                with act_cols[0]:
+                    if st.button("✅ 完成", key=f"complete_plan_{plan.id}", use_container_width=True):
+                        with get_session() as s:
+                            complete_plan(s, plan.id, user["id"])
+                        st.rerun()
+                with act_cols[1]:
+                    if st.button("⏩ 明日继续", key=f"continue_plan_{plan.id}", use_container_width=True):
+                        with get_session() as s:
+                            complete_plan(s, plan.id, user["id"])
+                            next_date_str = get_next_trade_date(today_str)
+                            next_date = date.fromisoformat(next_date_str)
+                            create_plan(s, pool_stock_id, user["id"], next_date, plan.content)
+                        st.rerun()
+                with act_cols[2]:
+                    if st.button("✏️ 编辑", key=f"edit_plan_{plan.id}", use_container_width=True):
+                        st.session_state["edit_plan_id"] = plan.id
+                        st.rerun()
+
+# ============================================================
+# 移出原因（全宽，仅在已移出时显示）
+# ============================================================
+
 if ps_dto.status == "removed" and ps_dto.removal_analysis:
     with st.container(border=True):
         st.markdown("**移出原因**")
         st.write(ps_dto.removal_analysis)
 
+# ============================================================
+# 返回按钮 + 添加/编辑计划弹窗
+# ============================================================
+
 col_back, _ = st.columns([1, 5])
 with col_back:
-    if st.button("← 返回池详情"):
+    if st.button("← 返回股票池"):
         st.session_state["pool_id"] = pool_id
         st.switch_page(st.session_state["_page_pool_detail"])
+
+# ====== 添加计划弹窗 ======
+
+@st.dialog("添加操作计划", width="small")
+def _add_plan_dialog():
+    st.caption(f"为 {ps_dto.code} {ps_dto.name} 添加操作计划")
+
+    today = date.today()
+    today_str = today.isoformat()
+    today_is_trade = is_trade_date(today_str)
+    next_trade_str = get_next_trade_date(today_str)
+    next_trade = date.fromisoformat(next_trade_str)
+
+    def _date_label(opt: str) -> str:
+        labels = {
+            "今日": f"今日（{today.month}月{today.day}日）",
+            "下个交易日": f"下个交易日（{next_trade.month}月{next_trade.day}日）",
+            "自定义": "自定义",
+        }
+        return labels.get(opt, opt)
+
+    date_mode = st.radio(
+        "操作日期",
+        ["今日", "下个交易日", "自定义"],
+        horizontal=True,
+        format_func=_date_label,
+        key="add_plan_date_mode",
+    )
+
+    if date_mode == "今日":
+        if not today_is_trade:
+            st.warning("今日非交易日，请选择其他日期")
+        plan_date_val = today
+    elif date_mode == "下个交易日":
+        plan_date_val = next_trade
+    else:
+        plan_date_val = st.date_input(
+            "选择日期",
+            value=date.today(),
+            min_value=date.today(),
+            key="add_plan_date",
+        )
+
+    plan_content = st.text_area("计划内容", key="add_plan_content", height=120)
+
+    col_cancel, col_save = st.columns(2)
+    with col_cancel:
+        if st.button("取消", use_container_width=True):
+            for k in ("add_plan_date_mode", "add_plan_date", "add_plan_content", "show_add_plan"):
+                st.session_state.pop(k, None)
+            st.rerun()
+    with col_save:
+        if st.button("保存", type="primary", use_container_width=True):
+            final_content = (st.session_state.get("add_plan_content") or "").strip()
+            if not final_content:
+                st.error("计划内容不能为空")
+                st.stop()
+            if date_mode == "自定义" and not is_trade_date(plan_date_val.isoformat()):
+                st.error("所选日期非 A 股交易日，请重新选择")
+                st.stop()
+            try:
+                with get_session() as s:
+                    create_plan(s, pool_stock_id, user["id"], plan_date_val, final_content)
+                st.toast("已添加操作计划", icon="📋")
+                for k in ("add_plan_date_mode", "add_plan_date", "add_plan_content", "show_add_plan"):
+                    st.session_state.pop(k, None)
+                st.rerun()
+            except ValueError as e:
+                st.error(str(e))
+            except Exception:
+                st.error("操作失败，请稍后重试")
+
+# ====== 编辑计划弹窗 ======
+
+@st.dialog("编辑操作计划", width="small")
+def _edit_plan_dialog(plan_dto):
+    st.caption(f"编辑对 {plan_dto.code} {plan_dto.name} 的操作计划")
+
+    today = date.today()
+    today_str = today.isoformat()
+    today_is_trade = is_trade_date(today_str)
+    next_trade_str = get_next_trade_date(today_str)
+    next_trade = date.fromisoformat(next_trade_str)
+
+    def _date_label(opt: str) -> str:
+        labels = {
+            "今日": f"今日（{today.month}月{today.day}日）",
+            "下个交易日": f"下个交易日（{next_trade.month}月{next_trade.day}日）",
+            "自定义": "自定义",
+        }
+        return labels.get(opt, opt)
+
+    # 根据计划已有日期确定默认 radio 选项
+    pd = plan_dto.plan_date
+    if pd == today:
+        default_idx = 0
+    elif pd == next_trade:
+        default_idx = 1
+    else:
+        default_idx = 2
+
+    date_mode = st.radio(
+        "操作日期",
+        ["今日", "下个交易日", "自定义"],
+        horizontal=True,
+        format_func=_date_label,
+        index=default_idx,
+        key="edit_plan_date_mode",
+    )
+
+    if date_mode == "今日":
+        if not today_is_trade:
+            st.warning("今日非交易日，请选择其他日期")
+        edit_plan_date = today
+    elif date_mode == "下个交易日":
+        edit_plan_date = next_trade
+    else:
+        edit_plan_date = st.date_input(
+            "选择日期",
+            value=plan_dto.plan_date,
+            min_value=date.today(),
+            key="edit_plan_date",
+        )
+
+    edit_plan_content = st.text_area(
+        "计划内容",
+        value=plan_dto.content,
+        key="edit_plan_content",
+        height=120,
+    )
+
+    col_cancel, col_save = st.columns(2)
+    with col_cancel:
+        if st.button("取消", use_container_width=True):
+            for k in ("edit_plan_date_mode", "edit_plan_date", "edit_plan_content", "edit_plan_id"):
+                st.session_state.pop(k, None)
+            st.rerun()
+    with col_save:
+        if st.button("保存", type="primary", use_container_width=True):
+            final_content = (st.session_state.get("edit_plan_content") or "").strip()
+            if not final_content:
+                st.error("计划内容不能为空")
+                st.stop()
+            if date_mode == "自定义" and not is_trade_date(edit_plan_date.isoformat()):
+                st.error("所选日期非 A 股交易日，请重新选择")
+                st.stop()
+            try:
+                with get_session() as s:
+                    update_plan(s, plan_dto.id, user["id"], edit_plan_date, final_content)
+                st.toast("已更新操作计划", icon="✅")
+                for k in ("edit_plan_date_mode", "edit_plan_date", "edit_plan_content", "edit_plan_id"):
+                    st.session_state.pop(k, None)
+                st.rerun()
+            except ValueError as e:
+                st.error(str(e))
+            except Exception:
+                st.error("操作失败，请稍后重试")
+
+# ====== 弹窗触发逻辑（不提前 pop，否则快捷按钮 rerun 后弹窗关闭） ======
+if st.session_state.get("show_add_plan"):
+    _add_plan_dialog()
+
+edit_plan_id = st.session_state.get("edit_plan_id")
+if edit_plan_id:
+    with get_session() as s:
+        ep = get_plan(s, edit_plan_id)
+        if ep:
+            _edit_plan_dialog(ep)
 
 st.divider()
 

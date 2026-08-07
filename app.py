@@ -13,6 +13,7 @@ restore_from_cookie()
 # ── 定义页面 ──
 dashboard = st.Page("pages/0_📊_仪表盘.py", title="仪表盘", icon="📊")
 pool = st.Page("pages/1_📈_我的股票池.py", title="我的股票池", icon="📈")
+plans = st.Page("pages/6_📋_操作计划.py", title="操作计划", icon="📋")
 members = st.Page("pages/2_👥_共享池成员.py", title="股票池设置", icon="⚙️", visibility="hidden")
 pool_detail = st.Page("pages/3_🔍_股票池详情.py", title="股票池详情", icon="🔍")
 analysis = st.Page("pages/4_📝_股票分析.py", title="股票分析", icon="📝", visibility="hidden")
@@ -24,6 +25,7 @@ init_page = st.Page("pages/0_🔧_系统初始化.py", title="系统初始化", 
 # ── 保存引用供各页面 switch_page 使用 ──
 st.session_state["_page_dashboard"] = dashboard
 st.session_state["_page_pool"] = pool
+st.session_state["_page_plans"] = plans
 st.session_state["_page_members"] = members
 st.session_state["_page_pool_detail"] = pool_detail
 st.session_state["_hidden_analysis_page"] = analysis
@@ -33,12 +35,12 @@ st.session_state["_page_admin"] = admin_page
 st.session_state["_page_init"] = init_page
 
 # ── 可见页面列表（侧边栏导航用） ──
-visible_pages = [dashboard, pool, members, review, trading]
+visible_pages = [dashboard, pool, plans, members, review, trading]
 if is_admin():
     visible_pages.append(admin_page)
 
 # ── 所有页面列表（路由用，含隐藏页） ──
-all_pages = [dashboard, pool, members, pool_detail, review, trading, analysis, init_page]
+all_pages = [dashboard, pool, plans, members, pool_detail, review, trading, analysis, init_page]
 if is_admin():
     all_pages.append(admin_page)
 
