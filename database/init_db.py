@@ -19,6 +19,24 @@ def init_db() -> None:
     except Exception:
         pass  # 列已存在时忽略
 
+    # 迁移：operation_plans 新增完成记录列
+    try:
+        with engine.connect() as conn:
+            conn.execute(text(
+                "ALTER TABLE operation_plans ADD COLUMN completion_note TEXT"
+            ))
+            conn.commit()
+    except Exception:
+        pass  # 列已存在时忽略
+    try:
+        with engine.connect() as conn:
+            conn.execute(text(
+                "ALTER TABLE operation_plans ADD COLUMN completed_at DATETIME"
+            ))
+            conn.commit()
+    except Exception:
+        pass  # 列已存在时忽略
+
 
 if __name__ == "__main__":
     init_db()

@@ -4,7 +4,6 @@ import html
 import streamlit as st
 
 # 状态色板
-COLOR_REMOVED = "#e5e7eb"  # 灰色（已移出）
 COLOR_MUTED = "#6b7280"  # 灰色（次要文字）
 
 
@@ -65,15 +64,18 @@ def render_key_focus_card(title: str, body: str = "") -> None:
 
 
 def render_removed_card(title: str, body: str = "") -> None:
-    """渲染已移出股票的卡片（灰色 + 斜体）。body 允许包含受控 HTML（如 <br/>）。"""
+    """渲染已移出股票的卡片（虚线边框 + 斜体，适配暗色模式）。body 允许包含受控 HTML（如 <br/>）。"""
     st.markdown(
         f"""
-        <div style="background-color: {COLOR_REMOVED}; border: 1px dashed #9ca3af;
-                    border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;">
-            <div style="font-weight: 500; color: #4b5563; font-style: italic; font-size: 16px;">
-                ♻️ {_esc(title)}
+        <div style="display:flex; border:1px dashed var(--border-color); border-radius:8px;
+                    overflow:hidden; margin-bottom:8px;">
+            <div style="width:4px; background:var(--text-color); opacity:0.15; flex-shrink:0;"></div>
+            <div style="flex:1; padding:12px 16px; background-color:var(--secondary-background-color);">
+                <div style="font-weight:500; color:var(--text-color); font-style:italic; font-size:16px; opacity:0.85;">
+                    ♻️ {_esc(title)}
+                </div>
+                <div style="font-size:13px; color:var(--text-color); opacity:0.7;">{body}</div>
             </div>
-            <div style="font-size: 13px; color: #6b7280;">{body}</div>
         </div>
         """,
         unsafe_allow_html=True,

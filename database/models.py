@@ -283,6 +283,8 @@ class OperationPlan(Base):
     plan_date = Column(Date, nullable=False, index=True)
     content = Column(Text, nullable=False)
     status = Column(String(16), nullable=False, default="pending")  # pending / completed
+    completion_note = Column(Text, nullable=True)  # 完成情况记录
+    completed_at = Column(DateTime, nullable=True)  # 完成时间
     created_at = Column(DateTime, nullable=False, server_default=text("(datetime('now','localtime'))"))
     updated_at = Column(DateTime, nullable=False, server_default=text("(datetime('now','localtime'))"))
 

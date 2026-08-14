@@ -1,4 +1,5 @@
 """股票分析：单只股票分析历史 + 新增结论/配图 + 编辑/删除本人结论。"""
+import html
 import os
 from datetime import date
 
@@ -129,6 +130,15 @@ with right_col:
                 else f"<span style='border:1px solid var(--primary-color);color:var(--primary-color);"
                 f"border-radius:10px;padding:2px 10px;font-size:11px;font-weight:600;'>⏳ 待完成</span>"
             )
+            if plan.status == "completed" and plan.completion_note:
+                completion_html = (
+                    f"<div style='margin-top:8px;padding:8px 10px;background:var(--secondary-background-color);"
+                    f"border-left:3px solid #10b981;border-radius:4px;font-size:12px;color:var(--text-color);'>"
+                    f"<b>💬 完成情况：</b>{html.escape(plan.completion_note)}</div>"
+                )
+            else:
+                completion_html = ""
+
             st.markdown(
                 f"""<div style="display:flex;border:1px solid var(--border-color);
 border-radius:8px;margin-bottom:8px;overflow:hidden;">
@@ -140,7 +150,7 @@ border-radius:8px;margin-bottom:8px;overflow:hidden;">
 <div style="font-size:14px;color:var(--text-color);margin-bottom:8px;line-height:1.6;">
 {plan.content}</div>
 <div style="font-size:12px;color:var(--text-color);opacity:0.5;">
-📅 {plan.plan_date}</div></div></div>""",
+📅 {plan.plan_date}</div>{completion_html}</div></div>""",
                 unsafe_allow_html=True,
             )
 
@@ -148,16 +158,13 @@ border-radius:8px;margin-bottom:8px;overflow:hidden;">
                 act_cols = st.columns(3)
                 with act_cols[0]:
                     if st.button("✅ 完成", key=f"complete_plan_{plan.id}", use_container_width=True):
-                        with get_session() as s:
-                            complete_plan(s, plan.id, user["id"])
+                        st.session_state["complete_plan_id"] = plan.id
+                        st.session_state["complete_plan_mode"] = "complete"
                         st.rerun()
                 with act_cols[1]:
                     if st.button("⏩ 明日继续", key=f"continue_plan_{plan.id}", use_container_width=True):
-                        with get_session() as s:
-                            complete_plan(s, plan.id, user["id"])
-                            next_date_str = get_next_trade_date(today_str)
-                            next_date = date.fromisoformat(next_date_str)
-                            create_plan(s, pool_stock_id, user["id"], next_date, plan.content)
+                        st.session_state["complete_plan_id"] = plan.id
+                        st.session_state["complete_plan_mode"] = "continue"
                         st.rerun()
                 with act_cols[2]:
                     if st.button("✏️ 编辑", key=f"edit_plan_{plan.id}", use_container_width=True):
@@ -301,7 +308,7 @@ def _edit_plan_dialog(plan_dto):
     else:
         edit_plan_date = st.date_input(
             "选择日期",
-            value=plan_dto.plan_date,
+            value=max(plan_dto.plan_date, date.today()),
             min_value=date.today(),
             key="edit_plan_date",
         )
@@ -340,6 +347,54 @@ def _edit_plan_dialog(plan_dto):
             except Exception:
                 st.error("操作失败，请稍后重试")
 
+# ====== 完成操作计划弹窗（记录完成情况） ======
+
+@st.dialog("完成操作计划", width="small")
+def _complete_plan_dialog():
+    mode = st.session_state.get("complete_plan_mode", "complete")
+    plan_id = st.session_state.get("complete_plan_id")
+    if not plan_id:
+        return
+
+    with get_session() as s:
+        cp = get_plan(s, plan_id)
+
+    st.caption(f"为 {cp.code} {cp.name} 记录完成情况")
+    st.markdown(f"**计划日期：** {cp.plan_date}  ·  **计划内容：** {cp.content}")
+
+    completion_note = st.text_area(
+        "完成情况记录",
+        height=120,
+        placeholder="记录本次计划的执行结果、操作依据、心得体会等（可留空）",
+        key="complete_plan_note",
+    )
+
+    col_cancel, col_save = st.columns(2)
+    with col_cancel:
+        if st.button("取消", use_container_width=True):
+            for k in ("complete_plan_id", "complete_plan_mode", "complete_plan_note"):
+                st.session_state.pop(k, None)
+            st.rerun()
+    with col_save:
+        action_label = "确认完成并继续" if mode == "continue" else "确认完成"
+        if st.button(action_label, type="primary", use_container_width=True):
+            note = (st.session_state.get("complete_plan_note") or "").strip()
+            try:
+                with get_session() as s:
+                    complete_plan(s, plan_id, user["id"], note)
+                    if mode == "continue":
+                        next_date_str = get_next_trade_date(date.today().isoformat())
+                        next_date = date.fromisoformat(next_date_str)
+                        create_plan(s, cp.pool_stock_id, user["id"], next_date, cp.content)
+                st.toast("计划已完成" + ("，已创建下个交易日计划" if mode == "continue" else ""), icon="✅")
+                for k in ("complete_plan_id", "complete_plan_mode", "complete_plan_note"):
+                    st.session_state.pop(k, None)
+                st.rerun()
+            except ValueError as e:
+                st.error(str(e))
+            except Exception:
+                st.error("操作失败，请稍后重试")
+
 # ====== 弹窗触发逻辑（不提前 pop，否则快捷按钮 rerun 后弹窗关闭） ======
 if st.session_state.get("show_add_plan"):
     _add_plan_dialog()
@@ -350,6 +405,10 @@ if edit_plan_id:
         ep = get_plan(s, edit_plan_id)
         if ep:
             _edit_plan_dialog(ep)
+
+complete_plan_id = st.session_state.get("complete_plan_id")
+if complete_plan_id:
+    _complete_plan_dialog()
 
 st.divider()
 

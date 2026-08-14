@@ -24,12 +24,14 @@ class PlanDTO:
     status: str  # pending / completed
     created_at: datetime
     updated_at: datetime
+    completion_note: Optional[str] = None  # 完成情况记录
+    completed_at: Optional[datetime] = None  # 完成时间
     # 关联信息
-    code: str
-    name: str
-    market: str
-    pool_name: str
-    pool_id: int
+    code: str = ""
+    name: str = ""
+    market: str = ""
+    pool_name: str = ""
+    pool_id: int = 0
 
 
 # ============================================================
@@ -52,6 +54,8 @@ def _plan_to_dto(session: Session, plan: OperationPlan) -> PlanDTO:
         status=plan.status,
         created_at=plan.created_at,
         updated_at=plan.updated_at,
+        completion_note=plan.completion_note,
+        completed_at=plan.completed_at,
         code=stock.code if stock else "?",
         name=stock.name if stock else "?",
         market=stock.market if stock else "?",
@@ -155,8 +159,11 @@ def delete_plan(session: Session, plan_id: int, user_id: int) -> None:
     )
 
 
-def complete_plan(session: Session, plan_id: int, user_id: int) -> PlanDTO:
-    """完成操作计划（仅本人可操作）。"""
+def complete_plan(session: Session, plan_id: int, user_id: int, completion_note: str = "") -> PlanDTO:
+    """完成操作计划（仅本人可操作）。
+
+    completion_note: 用户记录的完成情况（可空）。
+    """
     plan = session.get(OperationPlan, plan_id)
     if not plan:
         raise ValueError("操作计划不存在")
@@ -166,6 +173,8 @@ def complete_plan(session: Session, plan_id: int, user_id: int) -> PlanDTO:
         raise ValueError("该计划已完成")
 
     plan.status = "completed"
+    plan.completion_note = (completion_note or "").strip() or None
+    plan.completed_at = datetime.now()
     plan.updated_at = datetime.now()
     session.flush()
 

@@ -1,4 +1,5 @@
 """操作计划总览：统计卡片 + 全部计划列表 + 编辑 / 删除。"""
+import html
 from datetime import date, timedelta
 
 import streamlit as st
@@ -13,6 +14,7 @@ from services.plan_service import (
     update_plan,
 )
 from utils.page import render_page_header, render_sidebar_user
+from utils.date_util import format_datetime
 
 user = render_page_header("操作计划", "📋", "查看和管理所有操作计划")
 render_sidebar_user()
@@ -70,6 +72,15 @@ else:
                     if st.button("🗑️ 删除", key=f"plan_del_{p.id}", use_container_width=True):
                         st.session_state["delete_plan_page_id"] = p.id
                         st.rerun()
+            if p.status == "completed":
+                completed_time = format_datetime(p.completed_at)
+                note = p.completion_note or "（未填写完成情况）"
+                st.markdown(
+                    f"<div style='margin-top:4px;padding:6px 10px;background:var(--secondary-background-color);"
+                    f"border-left:3px solid #10b981;border-radius:4px;font-size:12px;color:var(--text-color);'>"
+                    f"✅ 完成于 {completed_time} · 💬 {html.escape(note)}</div>",
+                    unsafe_allow_html=True,
+                )
 
 # ============================================================
 # 编辑弹窗
@@ -85,7 +96,7 @@ if edit_id:
         def _edit_page_plan():
             edit_date = st.date_input(
                 "操作日期",
-                value=ep.plan_date,
+                value=max(ep.plan_date, date.today()),
                 min_value=date.today(),
                 key="page_edit_plan_date",
             )

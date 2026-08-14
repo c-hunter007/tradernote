@@ -1,4 +1,5 @@
 """股票池详情：池内股票列表 + 加入股票弹窗 + 重点标记 + 移出。"""
+import html
 from datetime import date
 
 import streamlit as st
@@ -394,14 +395,20 @@ border-radius:8px;margin-bottom:8px;overflow:hidden;">
             for i, sp in enumerate(stock_plans):
                 dot = "🟢" if sp.status == "completed" else "🟡"
                 border_bottom = "border-bottom:1px solid var(--border-color);" if not (i == len(stock_plans) - 1 and stock_key == list(grouped.keys())[-1]) else ""
+                note_html = ""
+                if sp.status == "completed" and sp.completion_note:
+                    note_html = (
+                        f"<div style='font-size:11px;color:var(--text-color);opacity:0.7;margin-top:2px;'>"
+                        f"💬 {html.escape(sp.completion_note[:40])}{'…' if len(sp.completion_note) > 40 else ''}</div>"
+                    )
                 plan_items.append(
                     f"""<div style="display:flex;align-items:flex-start;padding:8px 0;{border_bottom}">
 <div style="margin-right:8px;font-size:14px;line-height:1.4;">{dot}</div>
 <div style="flex:1;">
 <div style="font-weight:600;font-size:13px;color:var(--text-color);">{stock_key}</div>
 <div style="font-size:12px;color:var(--text-color);opacity:0.7;margin-top:2px;">
-{sp.content[:50]}{'...' if len(sp.content) > 50 else ''}</div>
-</div></div>"""
+{html.escape(sp.content[:50])}{'…' if len(sp.content) > 50 else ''}</div>
+{note_html}</div></div>"""
                 )
 
         st.markdown(
