@@ -131,27 +131,3 @@ def render_stock_card(
         """,
         unsafe_allow_html=True,
     )
-
-
-def render_note_card(
-    username: str,
-    created_at: str,
-    content: str,
-    image_count: int = 0,
-) -> None:
-    """渲染分析结论卡片（与股票卡片风格对齐）。"""
-    meta_parts = [f"**{_esc(username)}** · {_esc(created_at)}"]
-    if image_count:
-        meta_parts.append(f"🖼 {image_count} 张配图")
-    meta = " · ".join(meta_parts)
-
-    st.markdown(
-        f"""
-        <div style="background-color: var(--secondary-background-color); border: 1px solid var(--border-color); border-radius: 8px;
-                    padding: 12px 16px; margin-bottom: 4px;">
-            <div style="font-size: 13px; color: var(--text-color); opacity: 0.7; margin-bottom: 6px;">{meta}</div>
-            <div style="font-size: 14px; color: var(--text-color); white-space: pre-wrap;">{_esc(content)}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )

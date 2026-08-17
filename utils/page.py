@@ -7,7 +7,7 @@ from auth.session import current_user, init_cookies, require_admin, require_logi
 def render_page_header(title: str, icon: str, caption: str | None = None) -> dict:
     """渲染页面统一头部，返回当前用户 dict。"""
     st.set_page_config(
-        page_title=f"{title} · TradeNote",
+        page_title=f"{title} · TraderNote",
         page_icon=icon,
         layout="wide",
     )
@@ -21,7 +21,7 @@ def render_page_header(title: str, icon: str, caption: str | None = None) -> dic
 def render_admin_page_header(title: str, icon: str) -> dict:
     """渲染管理员页面统一头部，返回当前用户 dict。非管理员会被拦截。"""
     st.set_page_config(
-        page_title=f"{title} · TradeNote",
+        page_title=f"{title} · TraderNote",
         page_icon=icon,
         layout="wide",
     )

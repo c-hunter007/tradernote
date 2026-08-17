@@ -180,11 +180,10 @@ def complete_plan(session: Session, plan_id: int, user_id: int, completion_note:
 
     from services.activity_service import record_activity
     ps = session.get(PoolStock, plan.pool_stock_id)
-    record_activity(
-        session, user_id, "complete_plan",
-        f"完成了对 {ps.stock.code} {ps.stock.name} 的操作计划",
-        ps.pool_id,
-    )
+    desc = f"完成了对 {ps.stock.code} {ps.stock.name} 的操作计划"
+    if plan.completion_note:
+        desc += f"\n💬 完成情况：{plan.completion_note}"
+    record_activity(session, user_id, "complete_plan", desc, ps.pool_id)
 
     return _plan_to_dto(session, plan)
 

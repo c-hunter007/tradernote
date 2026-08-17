@@ -18,6 +18,7 @@ ACTION_CONFIG: dict[str, tuple[str, str]] = {
     "edit_note":      ("✏️ 编辑分析",     "wathet"),
     "delete_note":    ("🗑️ 删除分析",     "purple"),
     "comment":        ("💬 点评",         "indigo"),
+    "complete_plan":  ("✅ 完成操作计划", "green"),
 }
 
 _TIMEOUT = (5, 10)
